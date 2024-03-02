@@ -32,14 +32,7 @@ public class IMCNpsFabric implements ModInitializer {
 		ClientMain.setOutHandler((s) -> {});
 		ClientMain.setLogHandler(IMCNpsFabric::sendPlayer);
 
-		ClientMain.setStartHandler((process) -> {
-			if (ClientMain.getConfig() != null) {
-				sendPlayer("§b=======================");
-				sendPlayer("§b房间号: " + ClientMain.getConfig().getRoomId());
-				sendPlayer("§b可输入/jr " + ClientMain.getConfig().getRoomId() + " 进入");
-				sendPlayer("§b=======================");
-			}
-		});
+		ClientMain.setStartHandler((process) -> {});
 		if (token == null) {
 			Path file = path.resolve("token.txt");
 			if (file.toFile().exists()) {
@@ -64,15 +57,7 @@ public class IMCNpsFabric implements ModInitializer {
 					public void run() {
 						if (MinecraftClient.getInstance().player != null) {
 							if (!sent) {
-								if (ClientMain.getConfig() == null) {
-									sendPlayer("§c未发现Token! 请使用/nps <token> 设置Token");
-									sendPlayer("§c如果你没有Token, 请进入联机大厅申请");
-								} else {
-									sendPlayer("§aIMCNps 已启用, 别忘了下载并调§eLanServerProperties §aMod的设置");
-									sendPlayer("§a使用 §b离线模式 + UUID修复");
-								}
-								sendPlayer("§7路径: " + path);
-								sendPlayer("IMCNps 路径:" + path);
+								sendTips();
 								sent = true;
 							}
 						} else {
@@ -90,7 +75,7 @@ public class IMCNpsFabric implements ModInitializer {
 
 	public static int onCommand(CommandContext<ServerCommandSource> context) {
 		if (ClientMain.getConfig() != null) {
-			sendPlayer("IMCNps 已被启用!");
+			sendPlayer("§cIMCNps 已被启用!");
 		    return 0;
 		}
 		String[] cut = context.getInput().split("\\s+");
@@ -119,16 +104,28 @@ public class IMCNpsFabric implements ModInitializer {
 		}
 
 		ClientMain.start(path);
-		if (ClientMain.TOKEN == null) {
-			sendPlayer("§c未发现Token! 请使用/nps <token> 设置Token");
-			sendPlayer("§c如果你没有Token, 请进入联机大厅申请");
-		} else if (ClientMain.getConfig() != null) {
-			sendPlayer("§aIMCNps 已启用, 别忘了下载并调§eLanServerProperties §aMod的设置");
-			sendPlayer("§a使用 §b离线模式 + UUID修复");
-
-		}
-		sendPlayer("§7路径: " + path);
+		sendTips();
         return 0;
     }
+
+	public static void sendTips() {
+		if (ClientMain.getConfig() == null) {
+			sendPlayer("§c未发现Token! 请使用/nps <token> 设置Token");
+			sendPlayer("");
+			sendPlayer("§c如果你没有Token, 请进入联机大厅申请:");
+			sendPlayer("§e  正版验证 → dg.cymolink.com");
+			sendPlayer("§2  离线玩家 → off.dg.cymolink.com");
+		} else {
+			sendPlayer("§aIMCNps 已启用, 别忘了下载并调§eLanServerProperties §aMod的设置");
+			sendPlayer("§a使用 §e离线模式 + UUID修复");
+			sendPlayer("");
+			sendPlayer("§b=======================");
+			sendPlayer("§b房间号: " + ClientMain.getConfig().getRoomId());
+			sendPlayer("§b可输入/jr " + ClientMain.getConfig().getRoomId() + " 进入");
+			sendPlayer("§b=======================");
+		}
+		sendPlayer("§7路径: " + path);
+
+	}
 
 }
