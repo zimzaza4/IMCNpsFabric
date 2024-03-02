@@ -3,8 +3,10 @@ package re.imc.nps;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.MinecraftClientGame;
 import net.minecraft.command.argument.MessageArgumentType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
@@ -36,12 +38,11 @@ public class IMCNpsFabric implements ModInitializer {
 		if (token == null) {
 			Path file = path.resolve("token.txt");
 			if (file.toFile().exists()) {
-				ClientMain.start(path);
+				// ClientMain.start(path);
 			}
 		} else {
-			ClientMain.start(path);
+			// ClientMain.start(path);
 		}
-
 
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) ->
@@ -55,7 +56,11 @@ public class IMCNpsFabric implements ModInitializer {
 					boolean sent = false;
 					@Override
 					public void run() {
-						if (MinecraftClient.getInstance().player != null) {
+						if (ClientMain.DATA_PATH == null && MinecraftClient.getInstance().isIntegratedServerRunning()) {
+							ClientMain.start(path);
+						}
+
+						if (MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().isIntegratedServerRunning()) {
 							if (!sent) {
 								sendTips();
 								sent = true;
@@ -63,6 +68,7 @@ public class IMCNpsFabric implements ModInitializer {
 						} else {
 							sent = false;
 						}
+
 					}
 				}, 2, 5, TimeUnit.SECONDS);
 	}
