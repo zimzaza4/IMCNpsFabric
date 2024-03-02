@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "imcnps",
+	"version": "${version}",
+	"name": "IMCNps",
+	"description": "IMC Nps",
+	"authors": [
+		"zimzaza4"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/SMGoro-Project/IMCNpsFabric"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/imcnps/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"re.imc.nps.IMCNpsFabric"
+		]
+	},
+	"depends": {
+		"fabricloader": "*",
+		"minecraft": "*",
+		"java": ">=8",
+		"fabric": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
