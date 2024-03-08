@@ -1,17 +1,21 @@
 package re.imc.nps;
 
 import com.mojang.brigadier.context.CommandContext;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.MinecraftClientGame;
+import net.minecraft.client.gui.screen.ConnectScreen;
+import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
+import net.minecraft.client.network.ServerAddress;
+import net.minecraft.client.network.ServerInfo;
 import net.minecraft.command.argument.MessageArgumentType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +32,7 @@ public class IMCNpsFabric implements ModInitializer {
 	public static Path path;
 	@Override
 	public void onInitialize() {
+
 		path = FabricLoader.getInstance().getGameDir().resolve("mods").resolve("imcnps");;
 		path.toFile().mkdirs();
 		String token = System.getProperty("nps.accesstoken", null);
@@ -49,7 +54,7 @@ public class IMCNpsFabric implements ModInitializer {
 				dispatcher.register(literal("nps")
 						.requires((serverCommandSource) -> serverCommandSource.hasPermissionLevel(2))
 						.then(argument("arg", MessageArgumentType.message())
-						.executes((IMCNpsFabric::onCommand)))));
+						.executes((IMCNpsFabric::onStartCommand)))));
 
 		Executors.newSingleThreadScheduledExecutor()
 				.scheduleAtFixedRate(new Runnable() {
@@ -79,7 +84,7 @@ public class IMCNpsFabric implements ModInitializer {
 		}
 	}
 
-	public static int onCommand(CommandContext<ServerCommandSource> context) {
+	public static int onStartCommand(CommandContext<ServerCommandSource> context) {
 		if (ClientMain.getConfig() != null) {
 			sendPlayer("§cIMCNps 已被启用!");
 		    return 0;
@@ -133,5 +138,8 @@ public class IMCNpsFabric implements ModInitializer {
 		sendPlayer("§7路径: " + path);
 
 	}
+
+
+
 
 }
