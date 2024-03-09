@@ -19,6 +19,9 @@
 			"re.imc.nps.IMCNpsFabric"
 		]
 	},
+	"mixins": [
+		"imcnps.mixins.json"
+	],
 	"depends": {
 		"fabricloader": "*",
 		"minecraft": "*",
