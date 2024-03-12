@@ -7,18 +7,24 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.session.Session;
 import net.minecraft.command.argument.MessageArgumentType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 import re.imc.nps.i18n.LocaleMessage;
+import re.imc.nps.roomlist.RoomList;
+import re.imc.nps.utils.UUIDUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -28,12 +34,16 @@ import static net.minecraft.server.command.CommandManager.literal;
 public class IMCNpsFabric implements ModInitializer {
 
 	public static Path path;
+
+	public static Boolean ONLINE_MODE;
 	@Override
 	public void onInitialize() {
 
 		path = FabricLoader.getInstance().getGameDir().resolve("mods").resolve("imcnps");;
 		path.toFile().mkdirs();
+
 		String token = System.getProperty("nps.accesstoken", null);
+		ClientMain.setup(path, Info.Platform.FABRIC);
 		ClientMain.setOutHandler((s) -> {});
 		ClientMain.setLogHandler(IMCNpsFabric::sendPlayer);
 
@@ -48,6 +58,7 @@ public class IMCNpsFabric implements ModInitializer {
 		}
 
 
+
 		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) ->
 				dispatcher.register(literal("nps")
 						.requires((serverCommandSource) -> serverCommandSource.hasPermissionLevel(2))
@@ -59,42 +70,52 @@ public class IMCNpsFabric implements ModInitializer {
 						.register(server -> {
 							IntegratedServer integratedServererver = MinecraftClient.getInstance().getServer();
 							if (integratedServererver.isRemote()) {
-								integratedServererver.setServerPort(25565);
 								integratedServererver.setOnlineMode(false);
 							}
-							server.setServerPort(25565);
 							server.setOnlineMode(false);
 						});
 
+		RoomList.startServerGetTask();
 		Executors.newSingleThreadScheduledExecutor()
 				.scheduleAtFixedRate(new Runnable() {
 					boolean sent = false;
 					@Override
 					public void run() {
-						if (ClientMain.DATA_PATH == null && MinecraftClient.getInstance().isIntegratedServerRunning()) {
-							ClientMain.start(path, Info.Platform.FABRIC);
+
+						IntegratedServer server = MinecraftClient.getInstance().getServer();
+
+						if (server != null && server.isRemote() && ClientMain.DATA_PATH == null && MinecraftClient.getInstance().isIntegratedServerRunning()) {
+							ClientMain.start(path, Info.Platform.FABRIC, server.getServerPort());
+							// sendPlayer("P:" + server.getServerPort());
+						}
+						if (!MinecraftClient.getInstance().isIntegratedServerRunning()) {
+							if (ClientMain.getProcess() != null) {
+								if (!ClientMain.getProcess().isStop()) {
+									ClientMain.getProcess().stop();
+								} else if (server != null && ClientMain.DATA_PATH != null) {
+									ClientMain.start(path, Info.Platform.FABRIC, server.getServerPort());
+								}
+							}
 						}
 
-						if (MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().isIntegratedServerRunning()) {
+						if (MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().isIntegratedServerRunning() && server.isRemote()) {
 							if (!sent) {
 								sendTips();
 								sent = true;
 							}
 
-							IntegratedServer integratedServererver = MinecraftClient.getInstance().getServer();
-							if (integratedServererver.isRemote() && integratedServererver.isOnlineMode()) {
-								integratedServererver.setOnlineMode(false);
+							if (server.isOnlineMode()) {
+								server.setOnlineMode(false);
 							}
 
 						} else {
 							sent = false;
 						}
 
-
 					}
-				}, 2, 5, TimeUnit.SECONDS);
+				}, 2, 3, TimeUnit.SECONDS);
 		ClientPlayNetworking.registerGlobalReceiver(new Identifier("imcnps", "token"), (client, handler, buf, responseSender) -> {
-			String tokenReceived = new String(buf.array());
+			String tokenReceived = buf.getCharSequence(0, buf.capacity(), StandardCharsets.UTF_8).toString();
 			if (tokenReceived.length() > 500) {
 				return;
 			}
@@ -102,6 +123,7 @@ public class IMCNpsFabric implements ModInitializer {
 				sendPlayer(LocaleMessage.message("fabric_get_token"));
 			}
 		});
+
 	}
 
 	public static void sendPlayer(String info) {
@@ -113,7 +135,6 @@ public class IMCNpsFabric implements ModInitializer {
 	public static int onStartCommand(CommandContext<ServerCommandSource> context) {
 		if (ClientMain.getConfig() != null) {
 			sendPlayer(LocaleMessage.message("fabric_already_start"));
-		    return 0;
 		}
 		String[] cut = context.getInput().split("\\s+");
 		if (cut.length < 2) {
@@ -122,8 +143,14 @@ public class IMCNpsFabric implements ModInitializer {
 		String line = cut[1];
 		setToken(line);
 
-		ClientMain.start(path, Info.Platform.FABRIC);
-		sendTips();
+		IntegratedServer server = MinecraftClient.getInstance().getServer();
+
+		int port = server != null ? server.getServerPort() : 25565;
+
+		if (ClientMain.getConfig() == null) {
+			ClientMain.start(path, Info.Platform.FABRIC, port);
+			sendTips();
+		}
         return 0;
     }
 
@@ -140,7 +167,11 @@ public class IMCNpsFabric implements ModInitializer {
 		}
 
 		try {
-			String oldToken = Files.readAllLines(file).get(0);
+			List<String> lines = Files.readAllLines(file);
+			if (lines.isEmpty()) {
+				return true;
+			}
+			String oldToken = lines.get(0);
 			if (oldToken.equals(token)) {
 				return false;
 			}
@@ -184,11 +215,29 @@ public class IMCNpsFabric implements ModInitializer {
 			sendPlayer(LocaleMessage.message("fabric_room_id_tip").replace("%room_id%", String.valueOf(ClientMain.getConfig().getRoomId())));
 
 		}
-		sendPlayer(LocaleMessage.message("fabric_path").replace("%path%", String.valueOf(path)));
+		// sendPlayer(LocaleMessage.message("fabric_path").replace("%path%", String.valueOf(path)));
 
 	}
 
 
+	public static boolean isOnlineMode() {
+		if (ONLINE_MODE == null) {
+			Session session = MinecraftClient.getInstance().getSession();
+			@Nullable UUID uuid = UUIDUtils.getOfficialUUID(session.getUsername());
+			if (session.getUuidOrNull() == null) {
+				ONLINE_MODE = false;
+			}
+			if (uuid == null) {
+				ONLINE_MODE = false;
+			} else if (!uuid.equals(session.getUuidOrNull())) {
+				ONLINE_MODE = false;
+			}
+		}
+		if (ONLINE_MODE == null) {
+			ONLINE_MODE = true;
+		}
+		return ONLINE_MODE;
+    }
 
 
 }

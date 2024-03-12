@@ -1,10 +1,13 @@
 {
-	"required": true,
-	"package": "re.imc.nps.mixin",
-	"compatibilityLevel": "JAVA_8",
-	"mixins": [
-	],
-	"injectors": {
-		"defaultRequire": 1
-	}
+  "required": true,
+  "package": "re.imc.nps.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "MixinLanServerList"
+  ]
 }

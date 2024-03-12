@@ -16,6 +16,7 @@ base {
 
 repositories {
 	repositories {
+		
 		mavenCentral()
 		maven { url 'https://jitpack.io' }
 	}
@@ -26,7 +27,7 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation 'com.github.SMGoro-Project.IMCNps:core:44c09ff97b'
+	implementation 'com.github.SMGoro-Project.IMCNps:core:3d6d94d63b'
 	// implementation(files("$rootDir/dependency/core-1.0-SNAPSHOT.jar"))
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
