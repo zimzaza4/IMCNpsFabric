@@ -131,6 +131,7 @@ public class IMCNpsFabric implements ModInitializer {
 
 					}
 				}, 2, 3, TimeUnit.SECONDS);
+		
 		ClientPlayNetworking.registerGlobalReceiver(new Identifier("imcnps", "token"), (client, handler, buf, responseSender) -> {
 			String tokenReceived = buf.getCharSequence(0, buf.capacity(), StandardCharsets.UTF_8).toString();
 			if (tokenReceived.length() > 500) {
@@ -145,7 +146,7 @@ public class IMCNpsFabric implements ModInitializer {
 
 	public static void sendPlayer(Component info) {
 		if (MinecraftClient.getInstance().player != null) {
-			MinecraftClient.getInstance().player.sendMessage(Text.Serialization.fromJsonTree(GsonComponentSerializer.gson().serializeToTree(info)));
+			MinecraftClient.getInstance().player.sendMessage(Text.Serialization.fromJson(GsonComponentSerializer.gson().serialize(info).replace("\\r", "")));
 
 		}
 	}

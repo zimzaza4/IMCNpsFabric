@@ -1,5 +1,6 @@
 package re.imc.nps.mixin;
 
+import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.network.LanServerInfo;
 import net.minecraft.client.network.LanServerQueryManager;
 import org.spongepowered.asm.mixin.Final;
