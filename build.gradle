@@ -27,11 +27,11 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation 'com.github.SMGoro-Project.IMCNps:core:3d6d94d63b'
+	implementation 'com.github.SMGoro-Project.IMCNps:core:fdba63e475'
 	// implementation(files("$rootDir/dependency/core-1.0-SNAPSHOT.jar"))
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	
+	implementation "net.kyori:adventure-text-serializer-gson:4.14.0"
 	// Uncomment the following line to enable the deprecated Fabric API modules. 
 	// These are included in the Fabric API production distribution and allow you to update your mod to the latest modules at a later more convenient time.
 
@@ -67,6 +67,7 @@ shadowJar {
 		exclude('net.fabricmc:.*')
 		include(dependency('re.imc.nps:.*'))
 		include(dependency("com.github.SMGoro-Project.IMCNps:.*"))
+		include(dependency("net.kyori:.*"))
 		exclude '/mappings/*'
 	}
 

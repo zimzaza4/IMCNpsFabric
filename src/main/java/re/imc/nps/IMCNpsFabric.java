@@ -1,11 +1,15 @@
 package re.imc.nps;
 
+import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.session.Session;
 import net.minecraft.command.argument.MessageArgumentType;
@@ -14,6 +18,7 @@ import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
+import re.imc.nps.api.NpsLogger;
 import re.imc.nps.i18n.LocaleMessage;
 import re.imc.nps.roomlist.RoomList;
 import re.imc.nps.utils.UUIDUtils;
@@ -27,6 +32,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -43,9 +49,22 @@ public class IMCNpsFabric implements ModInitializer {
 		path.toFile().mkdirs();
 
 		String token = System.getProperty("nps.accesstoken", null);
-		ClientMain.setup(path, Info.Platform.FABRIC);
-		ClientMain.setOutHandler((s) -> {});
-		ClientMain.setLogHandler(IMCNpsFabric::sendPlayer);
+		ClientMain.setup(path, Info.Platform.FABRIC, new NpsLogger() {
+			@Override
+			public void logNpsProcess(String msg) {
+
+			}
+
+			@Override
+			public void logInfo(Component component) {
+				IMCNpsFabric.sendPlayer(component);
+			}
+
+			@Override
+			public void logInfoConsole(Component component) {
+
+			}
+		});
 
 		ClientMain.setStartHandler((process) -> {});
 		if (token == null) {
@@ -57,8 +76,6 @@ public class IMCNpsFabric implements ModInitializer {
 			// ClientMain.start(path);
 		}
 
-
-
 		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) ->
 				dispatcher.register(literal("nps")
 						.requires((serverCommandSource) -> serverCommandSource.hasPermissionLevel(2))
@@ -68,9 +85,9 @@ public class IMCNpsFabric implements ModInitializer {
 
 		ServerLifecycleEvents.SERVER_STARTING
 						.register(server -> {
-							IntegratedServer integratedServererver = MinecraftClient.getInstance().getServer();
-							if (integratedServererver.isRemote()) {
-								integratedServererver.setOnlineMode(false);
+							IntegratedServer integratedServer = MinecraftClient.getInstance().getServer();
+							if (server != null && integratedServer.isRemote()) {
+								integratedServer.setOnlineMode(false);
 							}
 							server.setOnlineMode(false);
 						});
@@ -88,14 +105,14 @@ public class IMCNpsFabric implements ModInitializer {
 							ClientMain.start(path, Info.Platform.FABRIC, server.getServerPort());
 							// sendPlayer("P:" + server.getServerPort());
 						}
-						if (!MinecraftClient.getInstance().isIntegratedServerRunning()) {
+						if (server == null || !server.isRemote()) {
 							if (ClientMain.getProcess() != null) {
 								if (!ClientMain.getProcess().isStop()) {
 									ClientMain.getProcess().stop();
-								} else if (server != null && ClientMain.DATA_PATH != null) {
-									ClientMain.start(path, Info.Platform.FABRIC, server.getServerPort());
 								}
 							}
+						} else if (server.isRemote() && (ClientMain.getProcess() == null || ClientMain.getProcess().isStop())) {
+							ClientMain.start(path, Info.Platform.FABRIC, server.getServerPort());
 						}
 
 						if (MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().isIntegratedServerRunning() && server.isRemote()) {
@@ -126,9 +143,10 @@ public class IMCNpsFabric implements ModInitializer {
 
 	}
 
-	public static void sendPlayer(String info) {
+	public static void sendPlayer(Component info) {
 		if (MinecraftClient.getInstance().player != null) {
-			MinecraftClient.getInstance().player.sendMessage(Text.of(info.replaceAll("\r\n","\n")), false);
+			MinecraftClient.getInstance().player.sendMessage(Text.Serialization.fromJsonTree(GsonComponentSerializer.gson().serializeToTree(info)));
+
 		}
 	}
 
@@ -138,7 +156,7 @@ public class IMCNpsFabric implements ModInitializer {
 		}
 		String[] cut = context.getInput().split("\\s+");
 		if (cut.length < 2) {
-			sendPlayer("/nps <token>");
+			sendPlayer(Component.text("/nps <token>").color(NamedTextColor.RED));
 		}
 		String line = cut[1];
 		setToken(line);
@@ -212,7 +230,7 @@ public class IMCNpsFabric implements ModInitializer {
 			sendPlayer("§b=======================");
 
 			 */
-			sendPlayer(LocaleMessage.message("fabric_room_id_tip").replace("%room_id%", String.valueOf(ClientMain.getConfig().getRoomId())));
+			sendPlayer(LocaleMessage.message("fabric_room_id_tip", s -> s.replace("%room_id%", String.valueOf(ClientMain.getConfig().getRoomId()))));
 
 		}
 		// sendPlayer(LocaleMessage.message("fabric_path").replace("%path%", String.valueOf(path)));
