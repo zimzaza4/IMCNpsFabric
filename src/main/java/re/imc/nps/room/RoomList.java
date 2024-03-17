@@ -1,4 +1,4 @@
-package re.imc.nps.roomlist;
+package re.imc.nps.room;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;

@@ -1,6 +1,5 @@
 package re.imc.nps;
 
-import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -9,18 +8,24 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
+import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
+import net.minecraft.client.network.ServerAddress;
+import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.option.ServerList;
 import net.minecraft.client.session.Session;
 import net.minecraft.command.argument.MessageArgumentType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.integrated.IntegratedServer;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 import re.imc.nps.api.NpsLogger;
 import re.imc.nps.i18n.LocaleMessage;
-import re.imc.nps.roomlist.RoomList;
+import re.imc.nps.room.PlayerRoomInfo;
+import re.imc.nps.room.RoomList;
+import re.imc.nps.utils.TextUtils;
 import re.imc.nps.utils.UUIDUtils;
 
 import java.io.IOException;
@@ -42,11 +47,16 @@ public class IMCNpsFabric implements ModInitializer {
 	public static Path path;
 
 	public static Boolean ONLINE_MODE;
+
+	public static String TOKEN;
 	@Override
 	public void onInitialize() {
 
 		path = FabricLoader.getInstance().getGameDir().resolve("mods").resolve("imcnps");;
 		path.toFile().mkdirs();
+
+		readToken();
+
 
 		String token = System.getProperty("nps.accesstoken", null);
 		ClientMain.setup(path, Info.Platform.FABRIC, new NpsLogger() {
@@ -82,7 +92,6 @@ public class IMCNpsFabric implements ModInitializer {
 						.then(argument("arg", MessageArgumentType.message())
 						.executes((IMCNpsFabric::onStartCommand)))));
 
-
 		ServerLifecycleEvents.SERVER_STARTING
 						.register(server -> {
 							IntegratedServer integratedServer = MinecraftClient.getInstance().getServer();
@@ -93,6 +102,7 @@ public class IMCNpsFabric implements ModInitializer {
 						});
 
 		RoomList.startServerGetTask();
+		PlayerRoomInfo.startGetRoomInfoTask();
 		Executors.newSingleThreadScheduledExecutor()
 				.scheduleAtFixedRate(new Runnable() {
 					boolean sent = false;
@@ -146,7 +156,7 @@ public class IMCNpsFabric implements ModInitializer {
 
 	public static void sendPlayer(Component info) {
 		if (MinecraftClient.getInstance().player != null) {
-			MinecraftClient.getInstance().player.sendMessage(Text.Serialization.fromJson(GsonComponentSerializer.gson().serialize(info).replace("\\r", "")));
+			MinecraftClient.getInstance().player.sendMessage(TextUtils.toText(info));
 
 		}
 	}
@@ -173,8 +183,13 @@ public class IMCNpsFabric implements ModInitializer {
         return 0;
     }
 
+	public static boolean isTokenExist() {
+		return PlayerRoomInfo.getRoomInfo() != null;
+	}
+
 	public static boolean setToken(String token) {
 		Path file = path.resolve("token.txt");
+
 		if (!file.toFile().exists()) {
 			try {
 				InputStream in = ClientMain.class.getClassLoader().getResourceAsStream("token.txt");
@@ -200,6 +215,7 @@ public class IMCNpsFabric implements ModInitializer {
 
         try {
 			if (token != null) {
+				TOKEN = token;
 				Files.write(file, token.getBytes(StandardCharsets.UTF_8));
 			}
 		} catch (Exception e) {
@@ -257,6 +273,44 @@ public class IMCNpsFabric implements ModInitializer {
 		}
 		return ONLINE_MODE;
     }
+
+	public static void startMultiplayer(MinecraftClient client, String serverAddress) {
+		ServerList serverList = new ServerList(client);
+		serverList.loadFile();
+		ServerInfo serverInfo = serverList.get(serverAddress);
+		if (serverInfo == null) {
+			serverInfo = new ServerInfo("CymoLink", serverAddress, ServerInfo.ServerType.OTHER);
+		}
+
+		ServerAddress serverAddress2 = ServerAddress.parse(serverAddress);
+		ConnectScreen.connect(new MultiplayerScreen(new TitleScreen()), client, serverAddress2, serverInfo, true);
+	}
+
+	public static void readToken() {
+		TOKEN = System.getProperty("nps.accesstoken", null);
+
+		if (TOKEN != null) {
+			return;
+		}
+		Path file = path.resolve("token.txt");
+		if (!file.toFile().exists()) {
+
+			try {
+				InputStream in = ClientMain.class.getClassLoader().getResourceAsStream("token.txt");
+
+				Files.copy(in, file);
+			} catch (IOException e) {
+				e.printStackTrace();
+				return;
+			}
+		}
+		try {
+			TOKEN = Files.readAllLines(file).get(0).replace(" ", "");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 
 
 }
