@@ -1,5 +1,8 @@
 package re.imc.nps.screen;
 
+import com.mojang.logging.LogUtils;
+import net.minecraft.MinecraftVersion;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -86,6 +89,7 @@ public class RoomEditScreen extends Screen {
             confirmButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, (button) -> {
                 ResultDTO result = AtlasAPI.modifyServer(IMCNpsUserModifyServerReq.fromDTO(serverInfo));
                 if (result.isSuccess()) {
+                    PlayerRoomInfo.setRoomInfo(serverInfo);
                     client.setScreen(parent);
                 }
             }).dimensions(this.width / 2 - 100, this.height / 4 + 120 + 28, 200, 20).build());
@@ -117,11 +121,9 @@ public class RoomEditScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        String minecraftVersion = MinecraftClient.getInstance().getGameVersion();
         Method method;
         try {
-
-            if (minecraftVersion.contains("1.20.1")) {
+            if (SharedConstants.getGameVersion().getProtocolVersion() <= 3465) {
                 method = this.getClass().getSuperclass().getDeclaredMethod("method_25420", DrawContext.class);
                 method.invoke(this, context);
             }

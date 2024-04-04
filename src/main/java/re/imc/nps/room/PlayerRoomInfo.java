@@ -24,6 +24,10 @@ public class PlayerRoomInfo {
         return roomInfo;
     }
 
+    public static void setRoomInfo(IMCNpsServerDTO roomInfo) {
+        PlayerRoomInfo.roomInfo = roomInfo;
+    }
+
     public static List<IMCNpsNodeDTO> getNodes() {
         return nodes;
     }
